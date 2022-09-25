@@ -18,5 +18,5 @@ How To Play:
 
 Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
 
-This game was built with [NEST](NEST.md) and base code from https://github.com/15-466/15-466-f22-base4
+This game was built with [NEST](NEST.md).
 
