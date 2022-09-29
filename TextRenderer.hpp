@@ -16,30 +16,32 @@
 #include <hb-ft.h>
 
 #include <glm/glm.hpp>
+#include "GL.hpp"
 #include <map>
+#include <string>
 
 class TextRenderer {
 
 public:
-    TextRenderer(std::string font_file, uint8_t font_size);
+    TextRenderer(const char* font_file, uint8_t font_size);
     ~TextRenderer();
-    void draw(std::string text, float x, float y, float scale, glm::vec3 color, float window_width, float window_height);
+    void draw(const char* text, float x, float y, float scale, glm::vec3 color, float window_width, float window_height);
 
 private:
     FT_Face ft_face;
     FT_Library ft_library;
 
-    hb_font_t* hb_font;
-    hb_buffer_t* hb_buffer;
-    hb_glyph_info_t* info;
-    hb_glyph_position_t* pos;
+    hb_font_t* hb_font = nullptr;
+    hb_buffer_t* hb_buffer = nullptr;
+    hb_glyph_info_t* info = nullptr;
+    hb_glyph_position_t* pos = nullptr;
 
     // From: https://learnopengl.com/In-Practice/Text-Rendering
     struct Character {
         GLuint TextureID;        // ID handle of the glyph texture
         glm::ivec2   Size;       // Size of glyph
         glm::ivec2   Bearing;    // Offset from baseline to left/top of glyph
-        unsigned int Advance;    // Offset to advance to next glyph
+        FT_Pos       Advance;    // Offset to advance to next glyph
     };
     std::map<uint8_t, Character> Characters;
 

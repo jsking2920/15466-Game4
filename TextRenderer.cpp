@@ -10,27 +10,26 @@
 
 #include "TextRenderer.hpp"
 
-TextRenderer::TextRenderer(std::string font_file, uint8_t font_size)
+#include "gl_compile_program.hpp"
+#include "gl_errors.hpp"
+#include "glm/ext.hpp"
+
+#include <iostream>
+
+TextRenderer::TextRenderer(const char* font_file, uint8_t font_size)
 {
     // initialization based on: https://github.com/harfbuzz/harfbuzz-tutorial/blob/master/hello-harfbuzz-freetype.c
     // Initialize FreeType and create FreeType font face
-    FT_Library ft_library;
-    FT_Face ft_face;
     FT_Error ft_error;
 
-    if ((ft_error = FT_Init_FreeType(&ft_library))) {
-        throw std::runtime_error("FT_Init failed!");
-    }
-    if ((ft_error = FT_New_Face(ft_library, font_file, 0, &ft_face))) {
-        throw std::runtime_error("FT_New_Face failed!");
-    }
-    if ((ft_error = FT_Set_Char_Size(ft_face, 0, font_size * 64, 0, 0))) {
-        throw std::runtime_error("FT_Set_Char_Size failed!");
-    }
+    ft_error = FT_Init_FreeType(&ft_library);
+    if (ft_error) throw std::runtime_error("FT_Init failed!");
+    ft_error = FT_New_Face(ft_library, font_file, 0, &ft_face);
+    if (ft_error) throw std::runtime_error("FT_New_Face failed!");
+    ft_error = FT_Set_Char_Size(ft_face, 0, font_size * 64, 0, 0);
+    if (ft_error) throw std::runtime_error("FT_Set_Char_Size failed!");
 
-    // Create hb-ft font and buffer
     hb_font = hb_ft_font_create(ft_face, NULL);
-    hb_buffer = hb_buffer_create();
 
     // From: https://learnopengl.com/In-Practice/Text-Rendering
     //  For each ASCII 0-128 character, we generate a texture and store its relevant data into a Character struct that we add to the Characters map
@@ -39,7 +38,7 @@ TextRenderer::TextRenderer(std::string font_file, uint8_t font_size)
 
         for (uint8_t c = 0; c < 128; c++) {
             // load character glyph 
-            if (FT_Load_Char(face, c, FT_LOAD_RENDER)) {
+            if (FT_Load_Char(ft_face, c, FT_LOAD_RENDER)) {
                 std::cout << "ERROR::FREETYTPE: Failed to load Glyph" << std::endl;
                 continue;
             }
@@ -68,15 +67,11 @@ TextRenderer::TextRenderer(std::string font_file, uint8_t font_size)
                 texture,
                 glm::ivec2(ft_face->glyph->bitmap.width, ft_face->glyph->bitmap.rows),
                 glm::ivec2(ft_face->glyph->bitmap_left, ft_face->glyph->bitmap_top),
-                face->glyph->advance.x
+                ft_face->glyph->advance.x
             };
             Characters.insert(std::pair<uint8_t, Character>(c, character));
         }
     }
-
-    // Clean up FreeType resources now that we're done with them
-    FT_Done_Face(ft_face);
-    FT_Done_FreeType(ft_library);
 
     // From: https://learnopengl.com/In-Practice/Text-Rendering
     // Create a VBO and VAO for rendering the quads
@@ -95,7 +90,7 @@ TextRenderer::TextRenderer(std::string font_file, uint8_t font_size)
     // From: https://learnopengl.com/In-Practice/Text-Rendering && https://github.com/15-466/15-466-f22-base1/blob/main/PPU466.cpp
     // Compile shader for rendering text
     {
-        GLuint text_shaders = gl_compile_program(
+        text_shaders = gl_compile_program(
             // Vertex shader:
             "#version 330 core\n"
             "layout (location = 0) in vec4 vertex; \n"
@@ -123,23 +118,31 @@ TextRenderer::TextRenderer(std::string font_file, uint8_t font_size)
     }
 }
 
-void TextRenderer::~TextRenderer() {
-    hb_buffer_destroy(hb_buffer);
+TextRenderer::~TextRenderer() {
+    if (hb_buffer) hb_buffer_destroy(hb_buffer);
     hb_font_destroy(hb_font);
+    FT_Done_Face(ft_face);
+    FT_Done_FreeType(ft_library);
     glDeleteBuffers(1, &VBO);
     glDeleteVertexArrays(1, &VAO);
 }
 
-void TextRenderer::draw(std::string text, float x, float y, float scale, glm::vec3 color, float window_width, float window_height) {
+void TextRenderer::draw(const char* text, float x, float y, float scale, glm::vec3 color, float window_width, float window_height) {
     
-    // If rendering new text, reshape with HarfBuzz
-    if (text.compare(cur_text) != 0) {
-        
-        cur_text = text;
+    std::string text_s = std::string(text);
 
+    // If rendering new text, reshape with HarfBuzz (note: would break everything if the first time this was called text == cur_text)
+    if (text_s.compare(cur_text) != 0) {
+        
+        cur_text = text_s;
+        
         // Based on: https://github.com/harfbuzz/harfbuzz-tutorial/blob/master/hello-harfbuzz-freetype.c
-        // Populate hb-buffer with new text
-        hb_buffer_reset(hb_buffer);
+        // Destroy and recreate hb-buffer with new text
+        if (hb_buffer) {
+            hb_buffer_destroy(hb_buffer);
+        }
+        hb_buffer = hb_buffer_create();
+        
         hb_buffer_add_utf8(hb_buffer, text, -1, 0, -1);
         hb_buffer_guess_segment_properties(hb_buffer);
 
@@ -147,8 +150,8 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
         hb_shape(hb_font, hb_buffer, NULL, 0);
 
         // Get glyph information and positions out of the buffer
-        hb_glyph_info_t* info = hb_buffer_get_glyph_infos(hb_buffer, NULL); // Not being used for anything currently but it probably should be?
-        hb_glyph_position_t* pos = hb_buffer_get_glyph_positions(hb_buffer, NULL);
+        info = hb_buffer_get_glyph_infos(hb_buffer, NULL); // Not being used for anything currently but it probably should be?
+        pos = hb_buffer_get_glyph_positions(hb_buffer, NULL);
     }
 
     // Based on: https://learnopengl.com/In-Practice/Text-Rendering && https://github.com/15-466/15-466-f22-base1/blob/main/PPU466.cpp
@@ -166,8 +169,9 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
 
     // Based on: https://learnopengl.com/In-Practice/Text-Rendering && https://github.com/harfbuzz/harfbuzz-tutorial/blob/master/hello-harfbuzz-freetype.c
     // iterate through all characters
+    uint32_t i = 0;
     std::string::const_iterator c;
-    for (c = text.begin(); c != text.end(); c++)
+    for (c = text_s.begin(); c != text_s.end(); c++)
     {
         Character ch = Characters[*c];
 
@@ -176,10 +180,11 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
         float y_advance = pos[i].y_advance / 64.0f;
         float x_offset = pos[i].x_offset / 64.0f;
         float y_offset = pos[i].y_offset / 64.0f;
+        i++;
 
         // FreeType stuff taking into account shaping info
-        float xpos = x + ((x_offset + ch.Bearing.x) * scale.x);
-        float ypos = y + ((y_offset - (ch.Size.y - ch.Bearing.y)) * scale.y);
+        float xpos = x + ((x_offset + ch.Bearing.x) * scale);
+        float ypos = y + ((y_offset - (ch.Size.y - ch.Bearing.y)) * scale);
         float w = ch.Size.x * scale;
         float h = ch.Size.y * scale;
 
@@ -194,7 +199,7 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
             { xpos + w, ypos + h,   1.0f, 0.0f }
         };
         // render glyph texture over quad
-        glBindTexture(GL_TEXTURE_2D, ch.textureID);
+        glBindTexture(GL_TEXTURE_2D, ch.TextureID);
         // update content of VBO memory
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
@@ -207,4 +212,6 @@ void TextRenderer::draw(std::string text, float x, float y, float scale, glm::ve
     }
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    GL_ERRORS();
 }

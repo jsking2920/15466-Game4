@@ -63,7 +63,7 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 	// (note: position will be over-ridden in update())
 	leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
 
-	text_renderer = new TextRenderer(data_path("CinzelDecorative-Regular.ttf"), (uint8_t)64);
+	text_renderer = new TextRenderer(data_path("Roboto-Regular.ttf").c_str(), (uint8_t)64);
 }
 
 PlayMode::~PlayMode() {
@@ -231,7 +231,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
 	}
 
-	//text_renderer->draw("Testing, Testing!", 0.0f, 0.0f, 1.0f, glm:vec3(1.0f, 1.0f, 1.0f), drawable_size.x, drawable_size.y);
+	text_renderer->draw("Testing, Testing!", 0.0f, 0.0f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), float(drawable_size.x), float(drawable_size.y));
 
 	GL_ERRORS();
 }
