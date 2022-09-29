@@ -2,6 +2,7 @@
 
 #include "Scene.hpp"
 #include "Sound.hpp"
+#include "TextRenderer.hpp"
 
 #include <glm/glm.hpp>
 
@@ -45,4 +46,5 @@ struct PlayMode : Mode {
 	//camera:
 	Scene::Camera *camera = nullptr;
 
+	TextRenderer *text_renderer = nullptr;
 };

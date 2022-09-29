@@ -62,9 +62,12 @@ PlayMode::PlayMode() : scene(*hexapod_scene) {
 	//start music loop playing:
 	// (note: position will be over-ridden in update())
 	leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
+
+	text_renderer = new TextRenderer(data_path("CinzelDecorative-Regular.ttf"), (uint8_t)64);
 }
 
 PlayMode::~PlayMode() {
+	delete text_renderer;
 }
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
@@ -227,6 +230,9 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
 	}
+
+	//text_renderer->draw("Testing, Testing!", 0.0f, 0.0f, 1.0f, glm:vec3(1.0f, 1.0f, 1.0f), drawable_size.x, drawable_size.y);
+
 	GL_ERRORS();
 }
 
