@@ -184,7 +184,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			body_text->draw((cur_poem.left->verb + " [1]").c_str(), 10.0f, (0.5f * float(drawable_size.y)), 1.0f, glm::vec3(0.7f, 0.7f, 0.7f), float(drawable_size.x), float(drawable_size.y));
 		}
 		if (cur_poem.right) {
-			body_text->draw((cur_poem.right->verb + " [2]").c_str(), float(drawable_size.x) - 75.0f, (0.5f * float(drawable_size.y)), 1.0f, glm::vec3(0.7f, 0.7f, 0.7f), float(drawable_size.x), float(drawable_size.y));
+			body_text->draw((cur_poem.right->verb + " [2]").c_str(), float(drawable_size.x) - 100.0f, (0.5f * float(drawable_size.y)), 1.0f, glm::vec3(0.7f, 0.7f, 0.7f), float(drawable_size.x), float(drawable_size.y));
 		}
 	}
 
