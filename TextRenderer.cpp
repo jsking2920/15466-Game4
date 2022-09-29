@@ -160,7 +160,7 @@ void TextRenderer::draw(const char* text, float x, float y, float scale, glm::ve
 
     // Set shader uniforms/attributes
     glUseProgram(text_shaders);
-    glUniform3f(glGetUniformLocation(text_shaders, "color"), color.x, color.y, color.z);
+    glUniform3f(glGetUniformLocation(text_shaders, "textColor"), color.x, color.y, color.z);
     glm::mat4 projection = glm::ortho(0.0f, window_width, 0.0f, window_height); // Orthographic projection matrix
     glUniformMatrix4fv(glGetUniformLocation(text_shaders, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
