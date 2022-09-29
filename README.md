@@ -14,7 +14,8 @@ Screen Shot:
 
 ![Screen Shot](screenshot.png)
 
-Sources: Thanks to my past bandmates, Mark, Alan, and Jonathan, for playing in all of the background music. 
+Sources: Thanks to my past bandmates, Mark, Alan, and Jonathan, for playing in all of the background music.
+All fonts from Google Fonts. 
 
 This game was built with [NEST](NEST.md).
 
