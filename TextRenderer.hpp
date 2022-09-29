@@ -21,7 +21,7 @@
 class TextRenderer {
 
 public:
-    TextRenderer(std::string font_file, uint8_t font_size) = default;
+    TextRenderer(std::string font_file, uint8_t font_size);
     ~TextRenderer();
     void draw(std::string text, float x, float y, float scale, glm::vec3 color, float window_width, float window_height);
 
