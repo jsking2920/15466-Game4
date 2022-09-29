@@ -1,22 +1,20 @@
-# (TODO: your game's title)
+# Memories
 
-Author: (TODO: your name)
+Author: Scott King
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: Take a walk through a poetry garden
 
-Text Drawing: (TODO: how does the text drawing in this game work? Is text precomputed? Rendered at runtime? What files or utilities are involved?)
+Text Drawing: .ttf files are loaded by FreeType, info on each ASCII glyph is stored in a map, text is 
+shaped at draw time by HarfBuzz unless the text being drawn hasn't changed, and all the code
+for this is in TextRenderer.hpp/.cpp
 
-Choices: (TODO: how does the game store choices and narrative? How are they authored? Anything nifty you want to point out?)
+Choices: All content is hard coded into PlayMode.hpp
 
 Screen Shot:
 
 ![Screen Shot](screenshot.png)
 
-How To Play:
-
-(TODO: describe the controls and (if needed) goals/strategy.)
-
-Sources: (TODO: list a source URL for any assets you did not create yourself. Make sure you have a license for the asset.)
+Sources: Thanks to my past bandmates, Mark, Alan, and Jonathan, for playing in all of the background music. 
 
 This game was built with [NEST](NEST.md).
 

@@ -2,7 +2,6 @@
 
 #include "LitColorTextureProgram.hpp"
 
-#include "DrawLines.hpp"
 #include "Mesh.hpp"
 #include "Load.hpp"
 #include "gl_errors.hpp"
@@ -18,8 +17,14 @@ Load< Scene > blank_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-Load< Sound::Sample > bkg_music_sample(LoadTagDefault, []() -> Sound::Sample const * {
+Load< Sound::Sample > wildflowers_music_sample(LoadTagDefault, []() -> Sound::Sample const * {
 	return new Sound::Sample(data_path("wildflower_reserve_demo.opus"));
+});
+Load< Sound::Sample > prayers_music_sample(LoadTagDefault, []() -> Sound::Sample const* {
+	return new Sound::Sample(data_path("prayers_demo.opus"));
+});
+Load< Sound::Sample > hudson_music_sample(LoadTagDefault, []() -> Sound::Sample const* {
+	return new Sound::Sample(data_path("hudson_demo.opus"));
 });
 
 PlayMode::PlayMode() : scene(*blank_scene) {
@@ -28,71 +33,41 @@ PlayMode::PlayMode() : scene(*blank_scene) {
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
 
-	//start music playing
-	bkg_music = Sound::play(*bkg_music_sample);
+	// Setup music loops
+	cur_loop = Sound::loop(*wildflowers_music_sample);
 
-	text_renderer = new TextRenderer(data_path("EBGaramond-Regular.ttf").c_str(), (uint8_t)64);
+	SetupPoems();
+
+	// Set up text renderers
+	display_text = new TextRenderer(data_path("EBGaramond-Regular.ttf").c_str(), display_font_size);
+	body_text = new TextRenderer(data_path("Overlock-Regular.ttf").c_str(), body_font_size);
 }
 
 PlayMode::~PlayMode() {
-	delete text_renderer;
+	delete display_text;
+	delete body_text;
 }
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
 
 	if (evt.type == SDL_KEYDOWN) {
-		if (evt.key.keysym.sym == SDLK_ESCAPE) {
-			SDL_SetRelativeMouseMode(SDL_FALSE);
+		if (evt.key.keysym.sym == SDLK_RETURN) {
+			enter.downs += 1;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_a) {
-			left.downs += 1;
-			left.pressed = true;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_d) {
-			right.downs += 1;
-			right.pressed = true;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_w) {
-			up.downs += 1;
-			up.pressed = true;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_s) {
-			down.downs += 1;
-			down.pressed = true;
+		} else if (evt.key.keysym.sym == SDLK_SPACE) {
+			space.downs += 1;
 			return true;
 		}
-	} else if (evt.type == SDL_KEYUP) {
-		if (evt.key.keysym.sym == SDLK_a) {
-			left.pressed = false;
+		else if (evt.key.keysym.sym == SDLK_1) {
+			one.downs += 1;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_d) {
-			right.pressed = false;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_w) {
-			up.pressed = false;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_s) {
-			down.pressed = false;
+		}
+		else if (evt.key.keysym.sym == SDLK_2) {
+			two.downs += 1;
 			return true;
 		}
 	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
-		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
-			SDL_SetRelativeMouseMode(SDL_TRUE);
-			return true;
-		}
-	} else if (evt.type == SDL_MOUSEMOTION) {
-		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-			glm::vec2 motion = glm::vec2(
-				evt.motion.xrel / float(window_size.y),
-				-evt.motion.yrel / float(window_size.y)
-			);
-			camera->transform->rotation = glm::normalize(
-				camera->transform->rotation
-				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
-			);
-			return true;
-		}
+		lmb.downs += 1;
 	}
 
 	return false;
@@ -100,11 +75,60 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 void PlayMode::update(float elapsed) {
 
+	timer += elapsed;
+
+	if (finished_poem) {
+		if (cur_poem.left && one.downs == 1) {
+			cur_poem = *cur_poem.left;
+			waiting = false;
+			cur_index = 0;
+			cur_line = 0;
+			cur_string = "";
+			finished_poem = false;
+			SetMusic();
+		}
+		else if (cur_poem.right && two.downs == 1) {
+			cur_poem = *cur_poem.right;
+			waiting = false;
+			cur_index = 0;
+			cur_line = 0;
+			cur_string = "";
+			finished_poem = false;
+			SetMusic();
+		}
+	}
+
+	if (waiting && (lmb.downs == 1 || space.downs == 1 || enter.downs == 1)) {
+		waiting = false;
+		cur_index = 0;
+		cur_line++;
+		cur_string = "";
+	}
+
+	if (timer >= tick_rate) {
+		timer = timer - tick_rate;
+		
+		if (!waiting) {
+			if (cur_index < cur_poem.lines[cur_line].length()) {
+				cur_string += cur_poem.lines[cur_line][cur_index];
+				cur_index++;
+			}
+			else if (cur_line < cur_poem.lines.size() - 1) {
+				waiting = true;
+			}
+			else {
+				finished_poem = true;
+			}
+		}
+	}
+
+
 	//reset button press counters:
-	left.downs = 0;
-	right.downs = 0;
-	up.downs = 0;
-	down.downs = 0;
+	enter.downs = 0;
+	space.downs = 0;
+	lmb.downs = 0;
+	one.downs = 0;
+	two.downs = 0;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -130,7 +154,55 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	scene.draw(*camera);
 
 	glDisable(GL_DEPTH_TEST);
-	text_renderer->draw("Testing, Testing!", 0.0f, 0.0f, 2.0f, glm::vec3(1.0f, 1.0f, 1.0f), float(drawable_size.x), float(drawable_size.y));
+	
+	// Draw title
+	display_text->draw(cur_poem.title.c_str(), -10.0f, 2.5f, 1.0f, glm::vec3(0.64f, 0.5f, 0.95f), float(drawable_size.x), float(drawable_size.y));
+	display_text->draw(cur_poem.title.c_str(), -20.0f, -1.5f, 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), float(drawable_size.x), float(drawable_size.y));
+	
+
+	// Draw current line or input prompt
+	if (cur_line == -1) {
+		body_text->draw("[click]", x_anchor * float(drawable_size.x), (y_anchor * float(drawable_size.y)), 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), float(drawable_size.x), float(drawable_size.y));
+	}
+	else {
+		body_text->draw(cur_string.c_str(), x_anchor * float(drawable_size.x), (y_anchor * float(drawable_size.y)), 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), float(drawable_size.x), float(drawable_size.y));
+	}
+
+	// Draw past lines
+	for (uint16_t i = 0; i < cur_line; i++) {
+		body_text->draw(
+			cur_poem.lines[i].c_str(),
+			x_anchor * float(drawable_size.x),
+			(y_anchor * float(drawable_size.y)) + ((cur_line - i) * body_font_size) + line_spacing,
+			1.0f, 
+			glm::vec3(1.0f, 1.0f, 1.0f), 
+			float(drawable_size.x), float(drawable_size.y));
+	}
+
+	if (finished_poem) {
+		if (cur_poem.left) {
+			body_text->draw((cur_poem.left->verb + " [1]").c_str(), 10.0f, (0.5f * float(drawable_size.y)), 1.0f, glm::vec3(0.7f, 0.7f, 0.7f), float(drawable_size.x), float(drawable_size.y));
+		}
+		if (cur_poem.right) {
+			body_text->draw((cur_poem.right->verb + " [2]").c_str(), float(drawable_size.x) - 75.0f, (0.5f * float(drawable_size.y)), 1.0f, glm::vec3(0.7f, 0.7f, 0.7f), float(drawable_size.x), float(drawable_size.y));
+		}
+	}
 
 	GL_ERRORS();
+}
+
+// bad
+void PlayMode::SetMusic() {
+	if (cur_poem.title == wildflowers.title) {
+		cur_loop->stop();
+		cur_loop = Sound::loop(*wildflowers_music_sample);
+	}
+	else if (cur_poem.title == prayers.title) {
+		cur_loop->stop();
+		cur_loop = Sound::loop(*prayers_music_sample);
+	}
+	else {
+		cur_loop->stop();
+		cur_loop = Sound::loop(*hudson_music_sample);
+	}
 }
