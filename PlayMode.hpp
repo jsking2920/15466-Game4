@@ -42,8 +42,9 @@ struct PlayMode : Mode {
 	float tick_rate = 0.1f;
 	bool waiting = true;
 	bool finished_poem = false;
+	bool started = false; // start off with input prompt
 
-	int16_t cur_line = -1; // start off with input prompt (line -1)
+	uint16_t cur_line = 0; 
 	uint16_t cur_index = 0;
 	std::string cur_string = "";
 

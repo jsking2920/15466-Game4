@@ -100,6 +100,7 @@ void PlayMode::update(float elapsed) {
 
 	if (waiting && (lmb.downs == 1 || space.downs == 1 || enter.downs == 1)) {
 		waiting = false;
+		started = true;
 		cur_index = 0;
 		cur_line++;
 		cur_string = "";
@@ -121,7 +122,6 @@ void PlayMode::update(float elapsed) {
 			}
 		}
 	}
-
 
 	//reset button press counters:
 	enter.downs = 0;
@@ -161,7 +161,7 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	
 
 	// Draw current line or input prompt
-	if (cur_line == -1) {
+	if (!started) {
 		body_text->draw("[click]", x_anchor * float(drawable_size.x), (y_anchor * float(drawable_size.y)), 1.0f, glm::vec3(1.0f, 1.0f, 1.0f), float(drawable_size.x), float(drawable_size.y));
 	}
 	else {
